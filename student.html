@@ -391,7 +391,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@latest/dist/image.min.js"></script>
 
     <script>
       const MODEL_URL = './model.json';
@@ -424,6 +424,81 @@
       let labels = [];
       let currentPreviewSrc = null;
       let videoStream = null;
+
+      function normalizeLabel(rawLabel) {
+        return String(rawLabel ?? '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9가-힣]+/g, '');
+      }
+
+      function classifyLabel(rawLabel, knownLabels = []) {
+        const label = normalizeLabel(rawLabel);
+        const known = knownLabels.map(normalizeLabel);
+
+        if (!label && known.length === 0) return 'unknown';
+
+        if (
+          label.includes('올바른') ||
+          label.includes('correct') ||
+          label.includes('good') ||
+          label.includes('정상') ||
+          label.includes('좋음') ||
+          label.includes('normal')
+        ) return 'correct';
+
+        if (
+          label.includes('허리') && label.includes('말림') ||
+          label.includes('backbend') ||
+          label.includes('허리말림') ||
+          label.includes('back') ||
+          label.includes('bend')
+        ) return 'bad_back';
+
+        if (
+          label.includes('무릎') && label.includes('모임') ||
+          label.includes('kneecollapse') ||
+          label.includes('무릎모임') ||
+          label.includes('knee') ||
+          label.includes('collapse')
+        ) return 'bad_knee';
+
+        if (
+          label.includes('벗윙크') ||
+          label.includes('buttwink') ||
+          label.includes('butt') ||
+          label.includes('wink')
+        ) return 'bad_buttwink';
+
+        const combined = known.join(' ').toLowerCase();
+
+        if (
+          combined.includes('올바른') ||
+          combined.includes('correct') ||
+          combined.includes('good') ||
+          combined.includes('좋음') ||
+          combined.includes('normal')
+        ) return 'correct';
+
+        if (
+          (combined.includes('허리') && combined.includes('말림')) ||
+          combined.includes('backbend') ||
+          combined.includes('back')
+        ) return 'bad_back';
+
+        if (
+          (combined.includes('무릎') && combined.includes('모임')) ||
+          combined.includes('knee') ||
+          combined.includes('collapse')
+        ) return 'bad_knee';
+
+        if (
+          combined.includes('벗윙크') ||
+          combined.includes('buttwink')
+        ) return 'bad_buttwink';
+
+        return 'unknown';
+      }
 
       function setModelStatus(text, type = '') {
         modelStatus.textContent = text;
@@ -466,38 +541,14 @@
         feedbackBox.classList.add('hidden');
       }
 
-      function normalizeLabel(rawLabel) {
-        return String(rawLabel ?? '')
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '');
-      }
-
-      function classifyLabel(rawLabel, knownLabels = []) {
-        const label = normalizeLabel(rawLabel);
-        const known = knownLabels.map(normalizeLabel);
-
-        if (!label && known.length === 0) return 'unknown';
-        if (label.includes('올바른') || label.includes('correct') || label.includes('good') || label.includes('정상')) return 'correct';
-        if ((label.includes('허리') && label.includes('말림')) || label.includes('backbend') || label.includes('허리말림')) return 'bad_back';
-        if ((label.includes('무릎') && label.includes('모임')) || label.includes('kneecollapse') || label.includes('무릎모임')) return 'bad_knee';
-        if (label.includes('벗윙크') || label.includes('buttwink')) return 'bad_buttwink';
-
-        const combined = known.join('|').toLowerCase();
-        if (combined.includes('올바른') || combined.includes('correct')) return 'correct';
-        if (combined.includes('허리') && combined.includes('말림')) return 'bad_back';
-        if (combined.includes('무릎') && combined.includes('모임')) return 'bad_knee';
-        if (combined.includes('벗윙크')) return 'bad_buttwink';
-
-        return 'unknown';
-      }
-
       function getPredictionResult(predictionList) {
         if (!Array.isArray(predictionList) || predictionList.length === 0) {
           return { label: 'unknown', probability: 0, category: 'unknown' };
         }
+
         const sorted = [...predictionList].sort((a, b) => (b.probability || 0) - (a.probability || 0));
         const best = sorted[0];
+
         return {
           label: best.className || 'unknown',
           probability: Number(best.probability || 0),
@@ -567,26 +618,24 @@
         resultPanel.classList.remove('hidden');
       }
 
-      async function loadModel() {
+      async function loadPoseModel() {
         setModelStatus('AI 모델을 준비하고 있어요!');
+
         try {
           if (!window.tf) throw new Error('TensorFlow.js가 로드되지 않았습니다.');
-          if (!window.tmImage) throw new Error('Teachable Machine Image 라이브러리가 로드되지 않았습니다.');
-
-          const metadataResponse = await fetch(METADATA_URL);
-          if (!metadataResponse.ok) throw new Error('metadata.json을 불러오지 못했습니다.');
-          const metadata = await metadataResponse.json();
-          labels = Array.isArray(metadata.labels) ? metadata.labels.map((label) => String(label).trim()) : [];
+          if (!window.tmPose) throw new Error('Teachable Machine Pose 라이브러리가 로드되지 않았습니다.');
 
           await window.tf.ready();
-          model = await tmImage.load(MODEL_URL, METADATA_URL);
+          model = await window.tmPose.load(MODEL_URL, METADATA_URL);
+          labels = model.getClassLabels ? model.getClassLabels() : [];
+
           modelReady = true;
           setModelStatus('AI 모델 준비 완료!', 'success');
           updateAnalyzeButton();
         } catch (error) {
           modelReady = false;
           model = null;
-          console.error('[Model] 로딩 실패:', error);
+          console.error('[Model] pose model 로딩 실패:', error);
           setModelStatus('모델을 불러오지 못했어요. 브라우저 콘솔을 확인해 주세요.', 'error');
         }
       }
@@ -607,11 +656,23 @@
         });
       }
 
+      async function estimatePoseAndPredict(imageElement) {
+        if (!model || !modelReady) {
+          throw new Error('모델이 아직 준비되지 않았습니다.');
+        }
+
+        const { pose, posenetOutput } = await model.estimatePose(imageElement);
+        const prediction = await model.predict(posenetOutput);
+
+        return getPredictionResult(prediction);
+      }
+
       async function analyzeCurrentImage() {
         if (!model || !modelReady) {
           setModelStatus('모델이 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.', 'error');
           return;
         }
+
         if (!currentPreviewSrc) {
           setModelStatus('먼저 사진을 선택하거나 카메라로 촬영해 주세요.', 'error');
           return;
@@ -623,8 +684,7 @@
         try {
           const imageFile = await fetch(currentPreviewSrc).then((res) => res.blob());
           const imageElement = await loadImageFromFile(imageFile);
-          const prediction = await model.predict(imageElement);
-          const result = getPredictionResult(prediction);
+          const result = await estimatePoseAndPredict(imageElement);
           renderResult(result);
           setModelStatus('AI 모델 준비 완료!', 'success');
         } catch (error) {
@@ -650,6 +710,7 @@
           setModelStatus('이 브라우저는 카메라를 사용할 수 없어요. 다른 브라우저를 사용해 주세요.', 'error');
           return;
         }
+
         try {
           stopCameraStream();
           const constraints = {
@@ -660,8 +721,10 @@
             },
             audio: false
           };
+
           videoStream = await navigator.mediaDevices.getUserMedia(constraints);
           cameraVideo.srcObject = videoStream;
+          await cameraVideo.play();
           cameraBox.classList.remove('hidden');
           cameraEmpty.classList.add('hidden');
           captureBtn.classList.remove('hidden');
@@ -670,7 +733,7 @@
           cameraBtn.textContent = '카메라 다시 켜기';
         } catch (error) {
           console.error('[Camera] 접근 오류:', error);
-          setModelStatus('카메라 사용이 거부되었어요. 카메라 접근을 허용하면 실시간 촬영을 할 수 있어요.', 'error');
+          setModelStatus('카메라 사용이 거부되었어요. 카메라 접근을 허용하면 카메라를 허용하고 다시 시도해 주세요.', 'error');
           cameraBox.classList.add('hidden');
           cameraEmpty.classList.remove('hidden');
           captureBtn.classList.add('hidden');
@@ -700,6 +763,7 @@
         const height = cameraVideo.videoHeight;
         canvas.width = width;
         canvas.height = height;
+
         const context = canvas.getContext('2d');
         context.drawImage(cameraVideo, 0, 0, width, height);
         const dataUrl = canvas.toDataURL('image/png');
@@ -761,7 +825,7 @@
       window.addEventListener('beforeunload', () => stopCameraStream());
       resetResultPanel();
       updateAnalyzeButton();
-      loadModel();
+      loadPoseModel();
     </script>
   </body>
 </html>
