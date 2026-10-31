@@ -1,1 +1,0 @@
-# squat-teacher-web
