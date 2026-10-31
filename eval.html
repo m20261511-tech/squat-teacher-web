@@ -216,18 +216,84 @@
     let labels = [];
     let allResults = [];
 
-    function normalizeComparisonKey(value) {
-      return String(value ?? '')
+    const LABEL_MAP = {
+      good: "good",
+      correct: "good",
+      올바른: "good",
+      정상: "good",
+      정상자세: "good",
+      safe: "good",
+
+      bad_back: "bad_back",
+      backbend: "bad_back",
+      허리말림: "bad_back",
+      허리: "bad_back",
+      badback: "bad_back",
+
+      bad_knee: "bad_knee",
+      kneecollapse: "bad_knee",
+      무릎모임: "bad_knee",
+      knee: "bad_knee",
+      badknee: "bad_knee",
+
+      bad_buttwink: "bad_buttwink",
+      buttwink: "bad_buttwink",
+      벗윙크: "bad_buttwink",
+      butt: "bad_buttwink"
+    };
+
+    function normalizeLabel(value) {
+      return String(value ?? "")
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9가-힣]+/g, '');
+        .replace(/[^a-z0-9가-힣]+/g, "");
+    }
+
+    function canonicalizeLabel(value) {
+      const raw = normalizeLabel(value);
+      if (!raw) return "unknown";
+
+      const mapped = LABEL_MAP[raw];
+      if (mapped) return mapped;
+
+      const synonyms = {
+        good: "good",
+        correct: "good",
+        normal: "good",
+        okay: "good",
+        badback: "bad_back",
+        backbend: "bad_back",
+        badknee: "bad_knee",
+        kneecollapse: "bad_knee",
+        buttwink: "bad_buttwink"
+      };
+
+      return synonyms[raw] || raw;
     }
 
     function getClassFromFilename(fileName) {
-      const base = String(fileName || '').replace(/\.[^/.]+$/, '');
-      const cleaned = base.replace(/\s+/g, '_');
+      const base = String(fileName || "").replace(/\.[^/.]+$/, "");
+      const cleaned = base.replace(/\s+/g, "_");
       const parts = cleaned.split(/[_-]+/).filter(Boolean);
-      return parts.length ? parts[0] : base;
+
+      if (!parts.length) return "unknown";
+
+      const first = parts[0].toLowerCase();
+
+      if (first.includes("good") || first.includes("correct") || first.includes("normal") || first.includes("올바른")) {
+        return "good";
+      }
+      if (first.includes("back") || first.includes("bend") || first.includes("허리") || first.includes("말림")) {
+        return "bad_back";
+      }
+      if (first.includes("knee") || first.includes("모임") || first.includes("무릎") || first.includes("collapse")) {
+        return "bad_knee";
+      }
+      if (first.includes("butt") || first.includes("wink") || first.includes("벗윙크")) {
+        return "bad_buttwink";
+      }
+
+      return first;
     }
 
     function escapeHtml(str) {
@@ -362,7 +428,7 @@
     function updateSummary(actualLabels, predictedLabels) {
       const total = actualLabels.length;
       const correct = actualLabels.filter((label, idx) =>
-        normalizeComparisonKey(label) === normalizeComparisonKey(predictedLabels[idx])
+        canonicalizeLabel(label) === canonicalizeLabel(predictedLabels[idx])
       ).length;
 
       const wrong = total - correct;
@@ -443,7 +509,7 @@
       document.getElementById("status").innerHTML = `처리 중... (${files.length}장)`;
 
       for (const file of files) {
-        const actual = getClassFromFilename(file.name);
+        const actual = canonicalizeLabel(getClassFromFilename(file.name));
         const previewUrl = URL.createObjectURL(file);
 
         try {
@@ -455,13 +521,13 @@
           const predList = await model.predict(posenetOutput);
 
           const best = predList.reduce((a, b) => a.probability > b.probability ? a : b, { probability: 0 });
-          const predictedLabel = String(best.className || "unknown");
+          const predictedLabel = canonicalizeLabel(best.className || "unknown");
           const confidence = Number(best.probability || 0);
 
           actualLabels.push(actual);
           predictions.push(predictedLabel);
 
-          const isCorrect = normalizeComparisonKey(actual) === normalizeComparisonKey(predictedLabel);
+          const isCorrect = actual === predictedLabel;
 
           resultRows.push({
             filename: file.name,
@@ -500,7 +566,7 @@
 
       const total = actualLabels.length;
       const correct = actualLabels.filter((label, idx) =>
-        normalizeComparisonKey(label) === normalizeComparisonKey(predictions[idx])
+        canonicalizeLabel(label) === canonicalizeLabel(predictions[idx])
       ).length;
 
       const accuracy = total ? (correct / total) * 100 : 0;
