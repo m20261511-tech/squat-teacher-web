@@ -1,609 +1,187 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>교사용 이미지 평가 대시보드</title>
-    <style>
-      :root {
-        --bg: #f4f9ff;
-        --panel: #ffffff;
-        --line: #dfeaf7;
-        --text: #1f2d3d;
-        --muted: #5d7186;
-        --primary: #3a8dff;
-        --primary-dark: #2a6fe6;
-        --success: #1c9c64;
-        --danger: #d94b52;
-        --warning: #d38a14;
-        --shadow: 0 14px 32px rgba(56, 86, 139, 0.12);
-      }
-
-      * { box-sizing: border-box; }
-
-      body {
-        margin: 0;
-        font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-        background: linear-gradient(180deg, #edf6ff 0%, #f8fbff 100%);
-        color: var(--text);
-      }
-
-      .wrap {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 32px 18px 48px;
-      }
-
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        box-shadow: var(--shadow);
-        padding: 20px 20px 26px;
-      }
-
-      h1 {
-        margin: 0 0 12px;
-        font-size: clamp(1.9rem, 3vw, 3rem);
-        color: #1d4d8f;
-      }
-
-      .subtitle {
-        margin: 0 0 18px;
-        color: var(--muted);
-        line-height: 1.6;
-      }
-
-      .mode-link {
-        display: inline-block;
-        margin-bottom: 18px;
-        color: #184f9c;
-        text-decoration: none;
-        font-weight: 700;
-      }
-
-      .toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 18px;
-      }
-
-      input[type="file"] { display: none; }
-
-      .button {
-        appearance: none;
-        border: none;
-        border-radius: 14px;
-        padding: 12px 18px;
-        font-size: 1rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: transform 0.15s ease, opacity 0.15s ease;
-      }
-
-      .button:hover { transform: translateY(-1px); }
-      .button:active { transform: translateY(0); }
-
-      .primary {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: white;
-      }
-
-      .secondary {
-        background: #edf5ff;
-        border: 1px solid #cae0ff;
-        color: #1b5bb1;
-      }
-
-      .hidden {
-        display: none !important;
-      }
-
-      .status {
-        background: #edf8ff;
-        border: 1px solid #cae7ff;
-        color: #1a5f8d;
-        border-radius: 14px;
-        padding: 12px 14px;
-        font-weight: 700;
-        margin-bottom: 18px;
-      }
-
-      .status.error {
-        background: #fff0f2;
-        border-color: #f4ced4;
-        color: #a4294e;
-      }
-
-      .status.success {
-        background: #ecfff5;
-        border-color: #c8ebd7;
-        color: #11784d;
-      }
-
-      .summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-
-      .summary-card {
-        background: #f9fbff;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 14px 16px;
-      }
-
-      .summary-card .label {
-        display: block;
-        color: var(--muted);
-        font-size: 0.82rem;
-        margin-bottom: 6px;
-      }
-
-      .summary-card .value {
-        font-size: 1.5rem;
-        font-weight: 800;
-      }
-
-      .section {
-        margin-top: 26px;
-      }
-
-      .section h2 {
-        margin: 0 0 12px;
-        font-size: 1.3rem;
-        color: #224d7b;
-      }
-
-      .table-wrap {
-        overflow-x: auto;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: #fbfdff;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 520px;
-      }
-
-      th, td {
-        border-bottom: 1px solid var(--line);
-        padding: 10px 12px;
-        text-align: center;
-        white-space: nowrap;
-      }
-
-      th {
-        background: #f2f8ff;
-        color: #204f7b;
-        font-weight: 800;
-      }
-
-      tbody tr:hover { background: #f7fbff; }
-
-      .misclassified-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 12px;
-      }
-
-      .misclassified-item {
-        display: grid;
-        grid-template-columns: 120px 1fr;
-        gap: 12px;
-        align-items: center;
-        background: #fff7f8;
-        border: 1px solid #f3d6db;
-        border-radius: 16px;
-        padding: 12px;
-      }
-
-      .error-thumb {
-        width: 120px;
-        height: 120px;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid #f1d0d5;
-        background: #f8f8f8;
-      }
-
-      .error-thumb img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .error-meta {
-        line-height: 1.8;
-      }
-
-      .badge {
-        display: inline-block;
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 0.8rem;
-        font-weight: 700;
-      }
-
-      .badge.wrong {
-        background: #fff0f2;
-        color: var(--danger);
-      }
-
-      .empty {
-        color: var(--muted);
-        background: #f8fbff;
-        border: 1px dashed var(--line);
-        border-radius: 14px;
-        padding: 18px;
-        text-align: center;
-      }
-
-      @media (max-width: 760px) {
-        .misclassified-item { grid-template-columns: 1fr; }
-        .error-thumb { width: 100%; height: 180px; }
-        .toolbar { flex-direction: column; align-items: stretch; }
-        .button { width: 100%; }
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="wrap">
-      <div class="panel">
-        <a class="mode-link" href="./index.html">← 모드 선택으로 돌아가기</a>
-        <h1>교사용 이미지 평가 대시보드</h1>
-        <p class="subtitle">
-          여러 장의 이미지를 한 번에 선택하면 각 사진을 포즈 모델로 추정하고, 파일명 규칙에 따라 실제 클래스를 추출해<br />
-          혼동행렬과 정분류율을 계산해 보여 줍니다.
-        </p>
-
-        <div class="toolbar">
-          <label for="imageInput" class="button primary">사진 선택 (여러 장)</label>
-          <input id="imageInput" type="file" accept="image/*" multiple />
-          <button id="downloadCsvBtn" class="button secondary hidden" type="button">CSV 내려받기</button>
-        </div>
-
-        <div id="statusBox" class="status">포즈 모델을 준비하고 있습니다.</div>
-
-        <div id="summaryBox" class="summary hidden">
-          <div class="summary-card">
-            <span class="label">선택 개수</span>
-            <span id="totalCount" class="value">0</span>
-          </div>
-          <div class="summary-card">
-            <span class="label">정답 수</span>
-            <span id="correctCount" class="value">0</span>
-          </div>
-          <div class="summary-card">
-            <span class="label">오답 수</span>
-            <span id="wrongCount" class="value">0</span>
-          </div>
-          <div class="summary-card">
-            <span class="label">전체 정확도</span>
-            <span id="accuracyRate" class="value">0%</span>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>혼동행렬</h2>
-          <div class="table-wrap">
-            <table id="confusionMatrixTable"></table>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>클래스별 정분류율</h2>
-          <div class="table-wrap">
-            <table id="accuracyTable"></table>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>틀린 사진 모음</h2>
-          <ul id="errorList" class="misclassified-list"></ul>
-        </div>
-      </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@latest/dist/image.min.js"></script>
-
-    <script>
-      // 현재 모델은 포즈 분류형 모델이기 때문에, tmImage 대신 tmPose를 사용합니다.
-      // 이미지를 불러온 뒤 estimatePose()로 자세 키포인트를 추정하고,
-      // 그 뒤 posenetOutput을 기반으로 최종 클래스를 예측합니다.
-      const MODEL_URL = './model.json';
-      const METADATA_URL = './metadata.json';
-
-      const statusBox = document.getElementById('statusBox');
-      const imageInput = document.getElementById('imageInput');
-      const summaryBox = document.getElementById('summaryBox');
-      const totalCountEl = document.getElementById('totalCount');
-      const correctCountEl = document.getElementById('correctCount');
-      const wrongCountEl = document.getElementById('wrongCount');
-      const accuracyRateEl = document.getElementById('accuracyRate');
-      const confusionMatrixTable = document.getElementById('confusionMatrixTable');
-      const accuracyTable = document.getElementById('accuracyTable');
-      const errorList = document.getElementById('errorList');
-      const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-
-      let model = null;
-      let labels = [];
-      let evaluationResults = [];
-
-      function setStatus(message, type = '') {
-        statusBox.textContent = message;
-        statusBox.className = 'status';
-        if (type) statusBox.classList.add(type);
-      }
-
-      function normalizeClassName(value) {
-        return String(value ?? '')
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '');
-      }
-
-      function getGroundTruthFromFileName(fileName) {
-        const baseName = fileName.replace(/\.[^/.]+$/, '');
-        const className = baseName.split('_')[0];
-        return normalizeClassName(className || baseName);
-      }
-
-      function createImageFromFile(file) {
-        return new Promise((resolve, reject) => {
-          const objectURL = URL.createObjectURL(file);
-          const img = new Image();
-
-          img.onload = () => {
-            URL.revokeObjectURL(objectURL);
-            resolve(img);
-          };
-
-          img.onerror = () => {
-            URL.revokeObjectURL(objectURL);
-            reject(new Error(`이미지 로드 실패: ${file.name}`));
-          };
-
-          img.src = objectURL;
-        });
-      }
-
-      function imageToCanvas(img) {
-        const canvas = document.createElement('canvas');
-        const scale = Math.min(1, 720 / Math.max(img.naturalWidth, img.naturalHeight));
-        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        return canvas;
-      }
-
-      async function loadModel() {
-        setStatus('포즈 모델을 불러오는 중입니다...');
-
-        try {
-          if (!window.tf) throw new Error('TensorFlow.js가 로드되지 않았습니다.');
-          if (!window.tmPose) throw new Error('Teachable Machine Pose 라이브러리가 로드되지 않았습니다.');
-
-          const metadata = await fetch(METADATA_URL).then((response) => {
-            if (!response.ok) throw new Error('metadata.json을 불러오지 못했습니다.');
-            return response.json();
-          });
-
-          labels = Array.isArray(metadata.labels)
-            ? metadata.labels.map((label) => normalizeClassName(label))
-            : [];
-
-          model = await tmPose.load(MODEL_URL, METADATA_URL);
-          setStatus('포즈 모델 준비 완료!', 'success');
-        } catch (error) {
-          console.error(error);
-          setStatus('포즈 모델 로딩에 실패했습니다. 브라우저 콘솔을 확인해 주세요.', 'error');
-        }
-      }
-
-      async function predictSingleImage(file) {
-        if (!model) throw new Error('모델이 아직 준비되지 않았습니다.');
-
-        // 포즈 모델은 이미지를 바로 분류하지 않고 먼저 PoseNet으로 자세 키포인트를 추정합니다.
-        const imageElement = await createImageFromFile(file);
-        const canvas = imageToCanvas(imageElement);
-        const { pose, posenetOutput } = await model.estimatePose(canvas);
-        const prediction = await model.predict(posenetOutput);
-
-        const best = prediction.reduce((max, current) => {
-          const currentProb = Number(current.probability || 0);
-          const maxProb = Number(max.probability || 0);
-          return currentProb > maxProb ? current : max;
-        }, prediction[0]);
-
-        const actualClass = getGroundTruthFromFileName(file.name);
-        const predictedClass = normalizeClassName(best.className || 'unknown');
-
-        return {
-          fileName: file.name,
-          actual: actualClass,
-          predicted: predictedClass,
-          confidence: Number(best.probability || 0),
-          correct: actualClass === predictedClass,
-          previewUrl: URL.createObjectURL(file)
-        };
-      }
-
-      function updateSummary(results) {
-        const total = results.length;
-        const correct = results.filter((item) => item.correct).length;
-        const wrong = total - correct;
-        const accuracy = total ? (correct / total) * 100 : 0;
-
-        totalCountEl.textContent = String(total);
-        correctCountEl.textContent = String(correct);
-        wrongCountEl.textContent = String(wrong);
-        accuracyRateEl.textContent = `${accuracy.toFixed(1)}%`;
-        summaryBox.classList.remove('hidden');
-      }
-
-      function renderConfusionMatrix(results) {
-        const allClasses = Array.from(new Set([
-          ...labels,
-          ...results.map((item) => item.actual),
-          ...results.map((item) => item.predicted)
-        ])).sort();
-
-        let html = '<thead><tr><th>실제\\예측</th>';
-        for (const className of allClasses) html += `<th>${className}</th>`;
-        html += '<th>정답률</th></tr></thead><tbody>';
-
-        for (const actualClass of allClasses) {
-          let rowTotal = 0;
-          let rowCorrect = 0;
-          html += `<tr><th>${actualClass}</th>`;
-
-          for (const predictedClass of allClasses) {
-            const count = results.filter(
-              (item) => item.actual === actualClass && item.predicted === predictedClass
-            ).length;
-
-            if (actualClass === predictedClass) rowCorrect += count;
-            rowTotal += count;
-            html += `<td>${count}</td>`;
-          }
-
-          const rowAccuracy = rowTotal ? ((rowCorrect / rowTotal) * 100).toFixed(1) : '0.0';
-          html += `<td>${rowAccuracy}%</td>`;
-          html += '</tr>';
-        }
-
-        html += '</tbody>';
-        confusionMatrixTable.innerHTML = html;
-      }
-
-      function renderAccuracyTable(results) {
-        const allClasses = Array.from(new Set([
-          ...labels,
-          ...results.map((item) => item.actual)
-        ])).sort();
-
-        let html = '<thead><tr><th>클래스</th><th>정분류 수</th><th>전체 수</th><th>정분류율</th></tr></thead><tbody>';
-
-        for (const className of allClasses) {
-          const total = results.filter((item) => item.actual === className).length;
-          const correct = results.filter(
-            (item) => item.actual === className && item.predicted === className
-          ).length;
-          const accuracy = total ? ((correct / total) * 100).toFixed(1) : '0.0';
-          html += `<tr><td>${className}</td><td>${correct}</td><td>${total}</td><td>${accuracy}%</td></tr>`;
-        }
-
-        html += '</tbody>';
-        accuracyTable.innerHTML = html;
-      }
-
-      function renderErrorList(results) {
-        const wrongResults = results.filter((item) => !item.correct);
-
-        if (wrongResults.length === 0) {
-          errorList.innerHTML = '<li class="empty">틀린 사진이 없습니다.</li>';
-          return;
-        }
-
-        errorList.innerHTML = wrongResults.map((item) => `
-          <li class="misclassified-item">
-            <div class="error-thumb">
-              <img src="${item.previewUrl}" alt="${item.fileName}" />
-            </div>
-            <div class="error-meta">
-              <div><strong>${item.fileName}</strong></div>
-              <div>실제: ${item.actual} → 예측: ${item.predicted}</div>
-              <div>신뢰도: ${(item.confidence * 100).toFixed(1)}%</div>
-              <span class="badge wrong">오분류</span>
-            </div>
-          </li>
-        `).join('');
-      }
-
-      function downloadCsv() {
-        if (evaluationResults.length === 0) return;
-
-        const rows = [['file_name', 'actual_class', 'predicted_class', 'confidence', 'correct']];
-        for (const row of evaluationResults) {
-          rows.push([
-            row.fileName,
-            row.actual,
-            row.predicted,
-            (row.confidence * 100).toFixed(2),
-            row.correct ? 'true' : 'false'
-          ]);
-        }
-
-        const csvText = rows
-          .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-          .join('\n');
-
-        const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'evaluation_results.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-
-      async function handleFiles(files) {
-        if (!model) {
-          setStatus('포즈 모델이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.', 'error');
-          return;
-        }
-
-        const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
-        if (imageFiles.length === 0) {
-          setStatus('이미지 파일만 선택할 수 있습니다.', 'error');
-          return;
-        }
-
-        setStatus('선택한 사진을 포즈 추정 기반으로 평가하고 있습니다...');
-        downloadCsvBtn.classList.add('hidden');
-
-        try {
-          evaluationResults = [];
-
-          for (const file of imageFiles) {
-            const result = await predictSingleImage(file);
-            evaluationResults.push(result);
-          }
-
-          updateSummary(evaluationResults);
-          renderConfusionMatrix(evaluationResults);
-          renderAccuracyTable(evaluationResults);
-          renderErrorList(evaluationResults);
-
-          downloadCsvBtn.classList.remove('hidden');
-          setStatus(`${evaluationResults.length}장의 이미지를 평가했습니다.`, 'success');
-        } catch (error) {
-          console.error(error);
-          setStatus('이미지 포즈 추정 중 문제가 발생했습니다. 이미지를 다시 확인해 주세요.', 'error');
-        }
-      }
-
-      imageInput.addEventListener('change', (event) => {
-        const selectedFiles = event.target.files;
-        if (!selectedFiles || selectedFiles.length === 0) return;
-        handleFiles(selectedFiles);
-      });
-
-      downloadCsvBtn.addEventListener('click', downloadCsv);
-      loadModel();
-    </script>
-  </body>
-</html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>이미지 분류 평가 도구</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --border: #dfe6ee;
+      --text: #1d2430;
+      --muted: #607089;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 20px 40px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .file-picker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    input[type="file"] {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      max-width: 100%;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    button.primary:hover {
+      filter: brightness(1.04);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: #f3f6fb;
+    }
+
+    .accuracy-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .accuracy-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fafcff;
+    }
+
+    .accuracy-name {
+      font-weight: 600;
+    }
+
+    .accuracy-value {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .wrong-list {
+      margin-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .wrong-item {
+      border: 1px solid #f1d5d5;
+      background: #fff7f7;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .wrong-item strong {
+      color: var(--danger);
+    }
+
+    .wrong-item .meta {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-top: 4px;
+    }
+
+    .empty {
+      color: var(--muted);*
+
