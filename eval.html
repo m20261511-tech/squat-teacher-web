@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>스쿼트 포즈 평가</title>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js"></script>
   <style>
     :root {
@@ -169,7 +169,8 @@
         <button id="downloadBtn" class="secondary" disabled>CSV 내려받기</button>
       </div>
 
-      <div id="status" class="status">이미지 파일을 선택해 주세요.</div>
+      <div id="status" class="status">이미지 파일을 선택한 뒤 '평가 시작'을 눌러 주세요.</div>
+      <div id="failureDetails" class="status" aria-live="polite"></div>
 
       <div class="summary">
         <div class="stat">
@@ -215,6 +216,8 @@
     let model = null;
     let labels = [];
     let allResults = [];
+    let evaluationRunning = false;
+    let thumbnailUrls = [];
 
     const LABEL_MAP = {
       good: "good",
@@ -486,6 +489,7 @@
     }
 
     async function processFiles(fileList) {
+      if (evaluationRunning) return;
       if (!fileList || !fileList.length) {
         document.getElementById("status").innerHTML = '<span class="bad">사진이 선택되지 않았습니다.</span>';
         return;
@@ -500,11 +504,18 @@
         return;
       }
 
+      evaluationRunning = true;
+      document.getElementById("runBtn").disabled = true;
+      document.getElementById("downloadBtn").disabled = true;
+      document.getElementById("failureDetails").textContent = "";
+      thumbnailUrls.forEach(url => URL.revokeObjectURL(url));
+      thumbnailUrls = [];
       const files = Array.from(fileList).sort((a, b) => a.name.localeCompare(b.name));
       const predictions = [];
       const actualLabels = [];
       const errorItems = [];
       const resultRows = [];
+      const failedFiles = [];
 
       document.getElementById("status").innerHTML = `처리 중... (${files.length}장)`;
 
@@ -517,8 +528,23 @@
           img.src = previewUrl;
           await img.decode();
 
-          const { pose, posenetOutput } = await model.estimatePose(img);
-          const predList = await model.predict(posenetOutput);
+          // 1단계: PoseNet으로 자세의 특징값을 추출한다.
+          let posenetOutput;
+          try {
+            const estimation = await model.estimatePose(img);
+            posenetOutput = estimation.posenetOutput;
+            if (!posenetOutput || !posenetOutput.length) throw new Error("포즈 특징값이 비어 있습니다.");
+          } catch (error) {
+            throw new Error("포즈 추정 실패: " + error.message, { cause: error });
+          }
+          // 2단계: 추출된 특징값을 사용하여 클래스를 예측한다.
+          let predList;
+          try {
+            predList = await model.predict(posenetOutput);
+            if (!Array.isArray(predList) || !predList.length) throw new Error("예측값이 비어 있습니다.");
+          } catch (error) {
+            throw new Error("자세 분류 실패: " + error.message, { cause: error });
+          }
 
           const best = predList.reduce((a, b) => a.probability > b.probability ? a : b, { probability: 0 });
           const predictedLabel = canonicalizeLabel(best.className || "unknown");
@@ -538,6 +564,7 @@
           });
 
           if (!isCorrect) {
+            thumbnailUrls.push(previewUrl);
             errorItems.push({
               filename: file.name,
               actual,
@@ -545,10 +572,13 @@
               confidence,
               previewUrl
             });
+          } else {
+            URL.revokeObjectURL(previewUrl);
           }
         } catch (error) {
+          URL.revokeObjectURL(previewUrl);
           console.error(`[Process] ${file.name} 처리 실패:`, error);
-          document.getElementById("status").innerHTML = `<span class="bad">${escapeHtml(file.name)} 처리 중 오류가 발생했습니다.</span>`;
+          failedFiles.push({ filename: file.name, message: error.message });
         }
       }
 
@@ -571,14 +601,26 @@
 
       const accuracy = total ? (correct / total) * 100 : 0;
 
-      document.getElementById("status").innerHTML =
-        `<span class="good">평가 완료</span> — ${correct}/${total} 정답, 정확도 ${accuracy.toFixed(1)}%`;
-
-      document.getElementById("downloadBtn").disabled = false;
+      // 실제 분석된 사진만으로 정확도를 계산하고 실패한 사진은 따로 표시한다.
+      const failures = failedFiles.length;
+      document.getElementById("failureDetails").innerHTML = failedFiles.map(item =>
+        `<div class="bad">처리 실패: ${escapeHtml(item.filename)} — ${escapeHtml(item.message)}</div>`
+      ).join("");
+      if (total === 0) {
+        document.getElementById("status").innerHTML =
+          `<span class="bad">평가 실패: ${files.length}장 모두 분석하지 못했습니다. 아래 오류를 확인해 주세요.</span>`;
+      } else {
+        document.getElementById("status").innerHTML =
+          `<span class="good">${failures ? '평가 일부 완료' : '평가 완료'}</span> — 분석 ${total}장, 실패 ${failures}장, 정답 ${correct}/${total}, 정확도 ${accuracy.toFixed(1)}%`;
+      }
+      document.getElementById("downloadBtn").disabled = total === 0;
+      document.getElementById("runBtn").disabled = false;
+      evaluationRunning = false;
     }
 
-    document.getElementById("fileInput").addEventListener("change", (event) => {
-      processFiles(event.target.files);
+    document.getElementById("fileInput").addEventListener("change", () => {
+      // 사진을 선택한 것만으로 평가하지 않는다. 버튼을 눌러 시작한다.
+      document.getElementById("status").textContent = "사진 선택 완료. 평가 시작 버튼을 눌러 주세요.";
     });
 
     document.getElementById("runBtn").addEventListener("click", () => {
