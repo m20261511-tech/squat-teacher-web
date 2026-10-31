@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>학생용 스쿼트 자세 판별기</title>
+    <style>
+      :root {
+        --bg: #f6fbff;
+        --panel: #ffffff;
+        --primary: #4cc9f0;
+        --primary-deep: #3aa8d8;
+        --accent: #ffd166;
+        --success: #2ec27e;
+        --danger: #ef476f;
+        --warning: #f08a24;
+        --text: #1f2d3d;
+        --muted: #5f7182;
+        --border: #dceaf5;
+        --shadow: 0 12px 28px rgba(38, 91, 135, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        font-family: "Apple SD Gothic Neo", "Malgun Gothic", "NanumGothic", sans-serif;
+        background: linear-gradient(180deg, #eef9ff 0%, #fdfdfd 100%);
+        color: var(--text);
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 24px;
+      }
+
+      .app {
+        width: min(100%, 950px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 24px 20px 30px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3rem);
+        margin: 0 0 12px;
+        color: #1b6aa8;
+      }
+
+      .subtitle {
+        font-size: 1.05rem;
+        line-height: 1.6;
+        color: var(--muted);
+        margin: 0 auto 14px;
+        max-width: 720px;
+      }
+
+      .mode-link {
+        display: inline-block;
+        margin: 0 0 18px;
+        color: #1d5ea9;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .privacy-box {
+        background: #fff7e8;
+        border: 1px solid #f7dba6;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 18px;
+      }
+
+      .privacy-box p {
+        margin: 6px 0;
+        font-weight: 700;
+        font-size: 0.98rem;
+        color: #795200;
+      }
+
+      .control-panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      button {
+        border: none;
+        border-radius: 18px;
+        font-size: 1rem;
+        font-weight: 700;
+        padding: 14px 20px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      }
+
+      button:hover { transform: translateY(-1px); }
+      button:active { transform: translateY(0); }
+
+      .primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(74, 167, 214, 0.28);
+      }
+
+      .secondary {
+        background: #ebf6ff;
+        color: #1f5d91;
+        border: 1px solid #cfe7fa;
+      }
+
+      .danger {
+        background: #fff1f4;
+        color: var(--danger);
+        border: 1px solid #f7c8d4;
+      }
+
+      .warm {
+        background: #fff9e8;
+        border: 1px solid #f7df9a;
+        color: #7d5900;
+      }
+
+      .status-box {
+        background: #edf8ff;
+        border: 1px solid #cfe8f7;
+        border-radius: 16px;
+        padding: 14px 16px;
+        text-align: center;
+        font-weight: 700;
+        color: #1a5e88;
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 18px;
+      }
+
+      .status-box.error {
+        background: #fff1f4;
+        border-color: #f4c9d5;
+        color: #9e2548;
+      }
+
+      .status-box.success {
+        background: #ecfff5;
+        border-color: #c9ebd8;
+        color: #117b4f;
+      }
+
+      .media-area {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 20px 0 12px;
+      }
+
+      .panel {
+        background: #f7fbff;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 16px;
+      }
+
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 1.12rem;
+        color: #1f4d73;
+      }
+
+      .camera-box, .preview-box {
+        position: relative;
+        min-height: 360px;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 2px dashed #c7dced;
+        background: #eaf5ff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .camera-box video, .preview-box img {
+        width: 100%;
+        height: 100%;
+        max-height: 420px;
+        object-fit: cover;
+        background: #dfeefc;
+        display: block;
+      }
+
+      .empty-state {
+        color: var(--muted);
+        font-weight: 700;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .hidden { display: none !important; }
+
+      .analysis-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .result-panel {
+        margin-top: 22px;
+        background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 18px;
+      }
+
+      .result-content {
+        display: grid;
+        grid-template-columns: minmax(220px, 300px) 1fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .result-image-wrap {
+        display: flex;
+        justify-content: center;
+      }
+
+      .result-image-wrap img {
+        width: 100%;
+        max-width: 260px;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 18px;
+        border: 2px solid #dfeaf7;
+        background: #edf6ff;
+      }
+
+      .result-text h3 {
+        margin: 0 0 10px;
+        font-size: clamp(1.5rem, 3vw, 2.4rem);
+      }
+
+      .result-text .description {
+        margin: 0 0 12px;
+        font-size: 1.1rem;
+        line-height: 1.6;
+      }
+
+      .probability {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .feedback-box {
+        background: #fff8ea;
+        border: 1px solid #f7df9a;
+        border-radius: 16px;
+        padding: 14px 16px;
+        color: #7a5a00;
+        margin-top: 14px;
+      }
+
+      .feedback-box strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .notice {
+        margin-top: 14px;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .result-good { color: var(--success); }
+      .result-bad { color: var(--danger); }
+      .result-unknown { color: var(--warning); }
+
+      .probability-good {
+        background: #eafff3;
+        color: var(--success);
+      }
+
+      .probability-bad {
+        background: #fff0f3;
+        color: var(--danger);
+      }
+
+      .probability-unknown {
+        background: #fff6dd;
+        color: var(--warning);
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      @media (max-width: 760px) {
+        body { padding: 14px; }
+        .app { padding: 16px 14px 22px; border-radius: 20px; }
+        .media-area, .result-content { grid-template-columns: 1fr; }
+        .camera-box, .preview-box { min-height: 260px; }
+        .control-panel, .analysis-actions { flex-direction: column; }
+        button { width: 100%; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="header">
+        <h1>학생용 스쿼트 자세 판별기</h1>
+        <p class="subtitle">
+          자신의 스쿼트 사진을 넣어 자세가 올바른지 혹은 잘못된 부분이 있는지 판별해요.
+        </p>
+        <a class="mode-link" href="./index.html">← 모드 선택으로 돌아가기</a>
+      </header>
+
+      <div class="privacy-box">
+        <p>⚠️ 개인정보가 잘 가려진 사진을 사용하세요. (얼굴을 반드시 모자이크할 것)</p>
+        <p>⚠️ 웹캠 사용 시 최대한 얼굴이 안 나오도록 촬영하세요.</p>
+      </div>
+
+      <div class="control-panel">
+        <button class="secondary" id="uploadBtn" type="button">사진 올리기</button>
+        <button class="secondary" id="cameraBtn" type="button">카메라 켜기</button>
+        <input id="imageInput" type="file" accept="image/*" />
+      </div>
+
+      <div id="modelStatus" class="status-box" aria-live="polite">AI 모델을 준비하고 있어요!</div>
+
+      <div class="media-area">
+        <div class="panel">
+          <h2>카메라 화면</h2>
+          <div id="cameraBox" class="camera-box hidden">
+            <video id="cameraVideo" autoplay playsinline muted></video>
+          </div>
+          <div id="cameraEmpty" class="empty-state">카메라가 꺼져 있어요. 버튼을 눌러 카메라를 켜세요.</div>
+        </div>
+
+        <div class="panel">
+          <h2>사진 미리보기</h2>
+          <div id="previewBox" class="preview-box">
+            <img id="previewImage" class="hidden" alt="업로드 또는 촬영한 스쿼트 사진 미리보기" />
+            <div id="previewEmpty" class="empty-state">사진을 올리거나 카메라로 찍어보세요.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-actions">
+        <button id="captureBtn" class="primary hidden" type="button">사진 촬영하기</button>
+        <button id="analyzeBtn" class="primary" type="button" disabled>자세 분석하기</button>
+        <button id="retakeBtn" class="warm hidden" type="button">다시 촬영하기</button>
+        <button id="closeCameraBtn" class="danger hidden" type="button">카메라 끄기</button>
+        <button id="resetBtn" class="secondary hidden" type="button">다시 분석하기</button>
+      </div>
+
+      <div id="resultPanel" class="result-panel hidden" aria-live="polite">
+        <div class="result-content">
+          <div class="result-image-wrap">
+            <img id="resultImage" alt="분석한 스쿼트 사진" />
+          </div>
+          <div class="result-text">
+            <h3 id="resultTitle" class="result-good">결과</h3>
+            <div id="probabilityBadge" class="probability probability-good">확률: 0%</div>
+            <p id="resultDescription" class="description">AI가 자세를 분석하고 있어요.</p>
+            <div id="feedbackBox" class="feedback-box hidden">
+              <strong>교정 피드백</strong>
+              <span id="feedbackText"></span>
+            </div>
+            <div class="notice">AI의 분석 결과는 실제 자세와 다를 수 있어요.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/image.min.js"></script>
+
+    <script>
+      const MODEL_URL = './model.json';
+      const METADATA_URL = './metadata.json';
+
+      const modelStatus = document.getElementById('modelStatus');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const imageInput = document.getElementById('imageInput');
+      const cameraBtn = document.getElementById('cameraBtn');
+      const captureBtn = document.getElementById('captureBtn');
+      const analyzeBtn = document.getElementById('analyzeBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const retakeBtn = document.getElementById('retakeBtn');
+      const closeCameraBtn = document.getElementById('closeCameraBtn');
+      const previewImage = document.getElementById('previewImage');
+      const previewEmpty = document.getElementById('previewEmpty');
+      const cameraBox = document.getElementById('cameraBox');
+      const cameraEmpty = document.getElementById('cameraEmpty');
+      const cameraVideo = document.getElementById('cameraVideo');
+      const resultPanel = document.getElementById('resultPanel');
+      const resultTitle = document.getElementById('resultTitle');
+      const resultDescription = document.getElementById('resultDescription');
+      const probabilityBadge = document.getElementById('probabilityBadge');
+      const feedbackBox = document.getElementById('feedbackBox');
+      const feedbackText = document.getElementById('feedbackText');
+      const resultImage = document.getElementById('resultImage');
+
+      let model = null;
+      let modelReady = false;
+      let labels = [];
+      let currentPreviewSrc = null;
+      let videoStream = null;
+
+      function setModelStatus(text, type = '') {
+        modelStatus.textContent = text;
+        modelStatus.className = 'status-box';
+        if (type === 'error') modelStatus.classList.add('error');
+        if (type === 'success') modelStatus.classList.add('success');
+      }
+
+      function updateAnalyzeButton() {
+        analyzeBtn.disabled = !currentPreviewSrc || !modelReady || !model;
+      }
+
+      function showPreviewImage(src) {
+        currentPreviewSrc = src;
+        previewImage.src = src;
+        previewImage.classList.remove('hidden');
+        previewEmpty.classList.add('hidden');
+        resultPanel.classList.add('hidden');
+        feedbackBox.classList.add('hidden');
+        updateAnalyzeButton();
+      }
+
+      function clearPreviewImage() {
+        previewImage.src = '';
+        previewImage.classList.add('hidden');
+        previewEmpty.classList.remove('hidden');
+        currentPreviewSrc = null;
+        resultPanel.classList.add('hidden');
+        feedbackBox.classList.add('hidden');
+        updateAnalyzeButton();
+      }
+
+      function resetResultPanel() {
+        resultPanel.classList.add('hidden');
+        resultTitle.textContent = '결과';
+        resultTitle.className = 'result-good';
+        resultDescription.textContent = 'AI가 자세를 분석하고 있어요.';
+        probabilityBadge.className = 'probability probability-good';
+        probabilityBadge.textContent = '확률: 0%';
+        feedbackBox.classList.add('hidden');
+      }
+
+      function normalizeLabel(rawLabel) {
+        return String(rawLabel ?? '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '');
+      }
+
+      function classifyLabel(rawLabel, knownLabels = []) {
+        const label = normalizeLabel(rawLabel);
+        const known = knownLabels.map(normalizeLabel);
+
+        if (!label && known.length === 0) return 'unknown';
+        if (label.includes('올바른') || label.includes('correct') || label.includes('good') || label.includes('정상')) return 'correct';
+        if ((label.includes('허리') && label.includes('말림')) || label.includes('backbend') || label.includes('허리말림')) return 'bad_back';
+        if ((label.includes('무릎') && label.includes('모임')) || label.includes('kneecollapse') || label.includes('무릎모임')) return 'bad_knee';
+        if (label.includes('벗윙크') || label.includes('buttwink')) return 'bad_buttwink';
+
+        const combined = known.join('|').toLowerCase();
+        if (combined.includes('올바른') || combined.includes('correct')) return 'correct';
+        if (combined.includes('허리') && combined.includes('말림')) return 'bad_back';
+        if (combined.includes('무릎') && combined.includes('모임')) return 'bad_knee';
+        if (combined.includes('벗윙크')) return 'bad_buttwink';
+
+        return 'unknown';
+      }
+
+      function getPredictionResult(predictionList) {
+        if (!Array.isArray(predictionList) || predictionList.length === 0) {
+          return { label: 'unknown', probability: 0, category: 'unknown' };
+        }
+        const sorted = [...predictionList].sort((a, b) => (b.probability || 0) - (a.probability || 0));
+        const best = sorted[0];
+        return {
+          label: best.className || 'unknown',
+          probability: Number(best.probability || 0),
+          category: classifyLabel(best.className || 'unknown', labels)
+        };
+      }
+
+      function renderResult(result) {
+        const maxProbability = Number(result.probability || 0) * 100;
+        const percentageText = `${maxProbability.toFixed(1)}%`;
+        const isHighConfidence = maxProbability >= 60;
+
+        resultTitle.textContent = '결과';
+        resultImage.src = currentPreviewSrc || previewImage.src;
+
+        if (!isHighConfidence) {
+          resultTitle.textContent = '잘 모르겠어요 🤔';
+          resultTitle.className = 'result-unknown';
+          resultDescription.textContent = '몸 전체가 잘 보이도록 다시 촬영해 주세요.';
+          probabilityBadge.className = 'probability probability-unknown';
+          probabilityBadge.textContent = `확률: ${percentageText}`;
+          feedbackBox.classList.add('hidden');
+          resultPanel.classList.remove('hidden');
+          return;
+        }
+
+        if (result.category === 'correct') {
+          resultTitle.textContent = '올바른 스쿼트 자세예요! 👍';
+          resultTitle.className = 'result-good';
+          resultDescription.textContent = '잘했어요! 지금처럼 바른 자세를 유지하며 운동해 보세요!';
+          probabilityBadge.className = 'probability probability-good';
+          probabilityBadge.textContent = `확률: ${percentageText}`;
+          feedbackBox.classList.add('hidden');
+        } else if (result.category === 'bad_back') {
+          resultTitle.textContent = '허리 말림이 발견되었어요!';
+          resultTitle.className = 'result-bad';
+          resultDescription.textContent = '허리 말림이 발견되었어요!';
+          probabilityBadge.className = 'probability probability-bad';
+          probabilityBadge.textContent = `확률: ${percentageText}`;
+          feedbackText.textContent = '허리를 곧게 세우고 척추 중립을 유지해 주세요. 상체가 너무 앞으로 말리지 않도록 천천히 내려가세요.';
+          feedbackBox.classList.remove('hidden');
+        } else if (result.category === 'bad_buttwink') {
+          resultTitle.textContent = '벗윙크 자세가 발견되었어요!';
+          resultTitle.className = 'result-bad';
+          resultDescription.textContent = '엉덩이와 무릎이 너무 과하게 틀어지는 자세예요.';
+          probabilityBadge.className = 'probability probability-bad';
+          probabilityBadge.textContent = `확률: ${percentageText}`;
+          feedbackText.textContent = '엉덩이와 무릎의 각도를 안정적으로 유지하고, 허리와 골반을 정렬해 주세요.';
+          feedbackBox.classList.remove('hidden');
+        } else if (result.category === 'bad_knee') {
+          resultTitle.textContent = '무릎이 안쪽으로 모이는 자세가 발견되었어요!';
+          resultTitle.className = 'result-bad';
+          resultDescription.textContent = '무릎이 안쪽으로 모이는 자세가 발견되었어요!';
+          probabilityBadge.className = 'probability probability-bad';
+          probabilityBadge.textContent = `확률: ${percentageText}`;
+          feedbackText.textContent = '무릎이 발끝 방향을 따라가도록 하고, 무릎이 안쪽으로 모이지 않게 천천히 움직여 주세요.';
+          feedbackBox.classList.remove('hidden');
+        } else {
+          resultTitle.textContent = '잘 모르겠어요 🤔';
+          resultTitle.className = 'result-unknown';
+          resultDescription.textContent = '몸 전체가 잘 보이도록 다시 촬영해 주세요.';
+          probabilityBadge.className = 'probability probability-unknown';
+          probabilityBadge.textContent = `확률: ${percentageText}`;
+          feedbackBox.classList.add('hidden');
+        }
+
+        resultPanel.classList.remove('hidden');
+      }
+
+      async function loadModel() {
+        setModelStatus('AI 모델을 준비하고 있어요!');
+        try {
+          if (!window.tf) throw new Error('TensorFlow.js가 로드되지 않았습니다.');
+          if (!window.tmImage) throw new Error('Teachable Machine Image 라이브러리가 로드되지 않았습니다.');
+
+          const metadataResponse = await fetch(METADATA_URL);
+          if (!metadataResponse.ok) throw new Error('metadata.json을 불러오지 못했습니다.');
+          const metadata = await metadataResponse.json();
+          labels = Array.isArray(metadata.labels) ? metadata.labels.map((label) => String(label).trim()) : [];
+
+          await window.tf.ready();
+          model = await tmImage.load(MODEL_URL, METADATA_URL);
+          modelReady = true;
+          setModelStatus('AI 모델 준비 완료!', 'success');
+          updateAnalyzeButton();
+        } catch (error) {
+          modelReady = false;
+          model = null;
+          console.error('[Model] 로딩 실패:', error);
+          setModelStatus('모델을 불러오지 못했어요. 브라우저 콘솔을 확인해 주세요.', 'error');
+        }
+      }
+
+      function loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+          const objectURL = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(objectURL);
+            resolve(img);
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objectURL);
+            reject(new Error(`이미지 로드 실패: ${file.name}`));
+          };
+          img.src = objectURL;
+        });
+      }
+
+      async function analyzeCurrentImage() {
+        if (!model || !modelReady) {
+          setModelStatus('모델이 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.', 'error');
+          return;
+        }
+        if (!currentPreviewSrc) {
+          setModelStatus('먼저 사진을 선택하거나 카메라로 촬영해 주세요.', 'error');
+          return;
+        }
+
+        setModelStatus('AI가 스쿼트 자세를 살펴보고 있어요!');
+        analyzeBtn.disabled = true;
+
+        try {
+          const imageFile = await fetch(currentPreviewSrc).then((res) => res.blob());
+          const imageElement = await loadImageFromFile(imageFile);
+          const prediction = await model.predict(imageElement);
+          const result = getPredictionResult(prediction);
+          renderResult(result);
+          setModelStatus('AI 모델 준비 완료!', 'success');
+        } catch (error) {
+          console.error('[Analyze] 추론 실패:', error);
+          setModelStatus('AI가 자세를 분석하지 못했어요. 사진을 다시 선택해 주세요.', 'error');
+        } finally {
+          updateAnalyzeButton();
+        }
+      }
+
+      function stopCameraStream() {
+        if (videoStream) {
+          videoStream.getTracks().forEach((track) => track.stop());
+          videoStream = null;
+        }
+        if (cameraVideo) {
+          cameraVideo.srcObject = null;
+        }
+      }
+
+      async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setModelStatus('이 브라우저는 카메라를 사용할 수 없어요. 다른 브라우저를 사용해 주세요.', 'error');
+          return;
+        }
+        try {
+          stopCameraStream();
+          const constraints = {
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          };
+          videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+          cameraVideo.srcObject = videoStream;
+          cameraBox.classList.remove('hidden');
+          cameraEmpty.classList.add('hidden');
+          captureBtn.classList.remove('hidden');
+          retakeBtn.classList.remove('hidden');
+          closeCameraBtn.classList.remove('hidden');
+          cameraBtn.textContent = '카메라 다시 켜기';
+        } catch (error) {
+          console.error('[Camera] 접근 오류:', error);
+          setModelStatus('카메라 사용이 거부되었어요. 카메라 접근을 허용하면 실시간 촬영을 할 수 있어요.', 'error');
+          cameraBox.classList.add('hidden');
+          cameraEmpty.classList.remove('hidden');
+          captureBtn.classList.add('hidden');
+          retakeBtn.classList.add('hidden');
+          closeCameraBtn.classList.add('hidden');
+        }
+      }
+
+      function closeCamera() {
+        stopCameraStream();
+        cameraBox.classList.add('hidden');
+        cameraEmpty.classList.remove('hidden');
+        captureBtn.classList.add('hidden');
+        retakeBtn.classList.add('hidden');
+        closeCameraBtn.classList.add('hidden');
+        cameraBtn.textContent = '카메라 켜기';
+      }
+
+      function captureCameraImage() {
+        if (!cameraVideo || !cameraVideo.videoWidth || !cameraVideo.videoHeight) {
+          setModelStatus('카메라 화면이 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.', 'error');
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const width = cameraVideo.videoWidth;
+        const height = cameraVideo.videoHeight;
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        context.drawImage(cameraVideo, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/png');
+        resultPanel.classList.add('hidden');
+        showPreviewImage(dataUrl);
+      }
+
+      function handleUploadedFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+          setModelStatus('이미지 파일만 선택할 수 있어요.', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          resultPanel.classList.add('hidden');
+          showPreviewImage(event.target.result);
+          setModelStatus('사진이 준비됐어요. 자세 분석하기 버튼을 눌러 AI 판별을 시작해 주세요.');
+        };
+        reader.readAsDataURL(file);
+      }
+
+      uploadBtn.addEventListener('click', () => {
+        closeCamera();
+        imageInput.click();
+      });
+
+      imageInput.addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        handleUploadedFile(file);
+      });
+
+      cameraBtn.addEventListener('click', async () => {
+        if (videoStream) closeCamera();
+        else await startCamera();
+      });
+
+      captureBtn.addEventListener('click', () => {
+        if (videoStream) captureCameraImage();
+      });
+
+      retakeBtn.addEventListener('click', () => {
+        clearPreviewImage();
+        if (!videoStream) startCamera();
+      });
+
+      closeCameraBtn.addEventListener('click', () => {
+        closeCamera();
+        clearPreviewImage();
+      });
+
+      analyzeBtn.addEventListener('click', analyzeCurrentImage);
+      resetBtn.addEventListener('click', () => {
+        clearPreviewImage();
+        resetResultPanel();
+        setModelStatus('AI 모델 준비 완료!', 'success');
+      });
+
+      window.addEventListener('beforeunload', () => stopCameraStream());
+      resetResultPanel();
+      updateAnalyzeButton();
+      loadModel();
+    </script>
+  </body>
+</html>
