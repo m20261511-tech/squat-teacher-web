@@ -164,7 +164,6 @@
       <h1>스쿼트 포즈 평가 도구</h1>
 
       <div class="toolbar">
-        <!-- 여러 장을 한 번에 선택 -->
         <input id="fileInput" type="file" accept="image/*" multiple />
         <button id="runBtn">평가 시작</button>
         <button id="downloadBtn" class="secondary" disabled>CSV 내려받기</button>
@@ -210,21 +209,25 @@
   </div>
 
   <script>
-    // pose 모델은 tmImage가 아니라 tmPose를 사용한다.
-    // 같은 폴더에 있는 model.json, metadata.json을 로드한다.
     const MODEL_URL = "./model.json";
     const METADATA_URL = "./metadata.json";
 
     let model = null;
     let labels = [];
-    let rawResults = [];
     let allResults = [];
 
-    // 파일 이름에서 '_' 앞부분을 실제 클래스 라벨로 사용한다.
-    // 예: "can_01.jpg" => "can"
+    function normalizeComparisonKey(value) {
+      return String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9가-힣]+/g, '');
+    }
+
     function getClassFromFilename(fileName) {
-      const base = fileName.replace(/\.[^/.]+$/, "");
-      return base.split("_")[0];
+      const base = String(fileName || '').replace(/\.[^/.]+$/, '');
+      const cleaned = base.replace(/\s+/g, '_');
+      const parts = cleaned.split(/[_-]+/).filter(Boolean);
+      return parts.length ? parts[0] : base;
     }
 
     function escapeHtml(str) {
@@ -236,7 +239,6 @@
         .replace(/'/g, "&#039;");
     }
 
-    // 혼동행렬 생성
     function buildConfusionMatrix(actualLabels, predictedLabels) {
       const unique = [...new Set(actualLabels.concat(predictedLabels))].sort();
       const indexMap = {};
@@ -257,7 +259,6 @@
       return { labels: unique, matrix };
     }
 
-    // 클래스별 정분류율 계산
     function calcAccuracyByClass(actualLabels, predictedLabels, uniqueClasses) {
       const stats = [];
 
@@ -278,7 +279,6 @@
       return stats;
     }
 
-    // 혼동행렬 HTML 생성
     function renderConfusionMatrix(matrixData) {
       const { labels, matrix } = matrixData;
 
@@ -297,7 +297,7 @@
 
       labels.forEach((rowLabel, rIdx) => {
         html += `<tr><th>${escapeHtml(rowLabel)}</th>`;
-        matrix[rIdx].forEach((value, cIdx) => {
+        matrix[rIdx].forEach((value) => {
           html += `<td>${value}</td>`;
         });
         html += `</tr>`;
@@ -307,7 +307,6 @@
       document.getElementById("confusionMatrixWrap").innerHTML = html;
     }
 
-    // 클래스별 정분류율 HTML 생성
     function renderAccuracyByClass(stats) {
       let html = `
         <table>
@@ -328,7 +327,7 @@
             <td>${escapeHtml(item.className)}</td>
             <td>${item.correct}</td>
             <td>${item.total}</td>
-            <td>${(item.rate).toFixed(1)}%</td>
+            <td>${item.rate.toFixed(1)}%</td>
           </tr>
         `;
       });
@@ -362,7 +361,10 @@
 
     function updateSummary(actualLabels, predictedLabels) {
       const total = actualLabels.length;
-      const correct = actualLabels.filter((label, idx) => label === predictedLabels[idx]).length;
+      const correct = actualLabels.filter((label, idx) =>
+        normalizeComparisonKey(label) === normalizeComparisonKey(predictedLabels[idx])
+      ).length;
+
       const wrong = total - correct;
       const rate = total ? (correct / total) * 100 : 0;
 
@@ -400,13 +402,16 @@
     }
 
     async function loadModel() {
-      // 브라우저 내부에서만 처리. 외부 서버로 사진을 보낼 수 없음.
-      // 이 페이지는 로컬 파일 선택만 사용한다.
       const status = document.getElementById("status");
       try {
         status.innerHTML = "모델 로딩 중...";
-        model = await tmPose.load(MODEL_URL, METADATA_URL);
+        if (!window.tf) throw new Error("TensorFlow.js가 로드되지 않았습니다.");
+        if (!window.tmPose) throw new Error("Teachable Machine Pose 라이브러리가 로드되지 않았습니다.");
+
+        await window.tf.ready();
+        model = await window.tmPose.load(MODEL_URL, METADATA_URL);
         labels = model.getClassLabels ? model.getClassLabels() : [];
+
         status.innerHTML = '<span class="good">모델 로딩 완료</span>';
       } catch (error) {
         status.innerHTML = '<span class="bad">모델 로딩 실패: ' + error.message + '</span>';
@@ -441,44 +446,43 @@
         const actual = getClassFromFilename(file.name);
         const previewUrl = URL.createObjectURL(file);
 
-        // 실제 이미지 로딩
-        const img = new Image();
-        img.src = previewUrl;
-        await img.decode();
+        try {
+          const img = new Image();
+          img.src = previewUrl;
+          await img.decode();
 
-        // pose 모델은 이미지에서 포즈를 추정 후, 포즈 특징을 기반으로 분류한다.
-        const { pose, posenetOutput } = await model.estimatePose(img);
+          const { pose, posenetOutput } = await model.estimatePose(img);
+          const predList = await model.predict(posenetOutput);
 
-        // 포즈 추정 결과를 기반으로 클래스 예측
-        const predList = await model.predict(posenetOutput);
+          const best = predList.reduce((a, b) => a.probability > b.probability ? a : b, { probability: 0 });
+          const predictedLabel = String(best.className || "unknown");
+          const confidence = Number(best.probability || 0);
 
-        // 가장 높은 확률 클래스 선택
-        const best = predList.reduce((a, b) => a.probability > b.probability ? a : b);
-        const predictedLabel = best.className;
-        const confidence = Number(best.probability);
+          actualLabels.push(actual);
+          predictions.push(predictedLabel);
 
-        actualLabels.push(actual);
-        predictions.push(predictedLabel);
+          const isCorrect = normalizeComparisonKey(actual) === normalizeComparisonKey(predictedLabel);
 
-        const isCorrect = actual === predictedLabel;
-
-        resultRows.push({
-          filename: file.name,
-          actual,
-          predicted: predictedLabel,
-          isCorrect,
-          confidence
-        });
-
-        // 틀린 사진만 보관
-        if (!isCorrect) {
-          errorItems.push({
+          resultRows.push({
             filename: file.name,
             actual,
             predicted: predictedLabel,
-            confidence,
-            previewUrl
+            isCorrect,
+            confidence
           });
+
+          if (!isCorrect) {
+            errorItems.push({
+              filename: file.name,
+              actual,
+              predicted: predictedLabel,
+              confidence,
+              previewUrl
+            });
+          }
+        } catch (error) {
+          console.error(`[Process] ${file.name} 처리 실패:`, error);
+          document.getElementById("status").innerHTML = `<span class="bad">${escapeHtml(file.name)} 처리 중 오류가 발생했습니다.</span>`;
         }
       }
 
@@ -495,7 +499,10 @@
       renderErrorList(errorItems);
 
       const total = actualLabels.length;
-      const correct = actualLabels.filter((label, idx) => label === predictions[idx]).length;
+      const correct = actualLabels.filter((label, idx) =>
+        normalizeComparisonKey(label) === normalizeComparisonKey(predictions[idx])
+      ).length;
+
       const accuracy = total ? (correct / total) * 100 : 0;
 
       document.getElementById("status").innerHTML =
@@ -519,7 +526,6 @@
 
     document.getElementById("downloadBtn").addEventListener("click", downloadCSV);
 
-    // 페이지 로드시 모델을 준비
     loadModel();
   </script>
 </body>
