@@ -389,8 +389,9 @@
         </div>
       </div>
     </div>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js"></script>
 
     <script>
       const MODEL_URL = './model.json';
@@ -469,33 +470,8 @@
           label.includes('wink')
         ) return 'bad_buttwink';
 
-        const combined = known.join(' ').toLowerCase();
-
-        if (
-          combined.includes('올바른') ||
-          combined.includes('correct') ||
-          combined.includes('good') ||
-          combined.includes('좋음') ||
-          combined.includes('normal')
-        ) return 'correct';
-
-        if (
-          (combined.includes('허리') && combined.includes('말림')) ||
-          combined.includes('backbend') ||
-          combined.includes('back')
-        ) return 'bad_back';
-
-        if (
-          (combined.includes('무릎') && combined.includes('모임')) ||
-          combined.includes('knee') ||
-          combined.includes('collapse')
-        ) return 'bad_knee';
-
-        if (
-          combined.includes('벗윙크') ||
-          combined.includes('buttwink')
-        ) return 'bad_buttwink';
-
+        // 특정 예측 클래스의 이름만으로 유형을 식별한다.
+        // 다른 클래스의 이름을 합쳐 판단하면 잘못 분류될 수 있으므로 사용하지 않는다.
         return 'unknown';
       }
 
@@ -635,7 +611,7 @@
           modelReady = false;
           model = null;
           console.error('[Model] pose model 로딩 실패:', error);
-          setModelStatus('모델을 불러오지 못했어요. 브라우저 콘솔을 확인해 주세요.', 'error');
+          setModelStatus('모델을 불러오지 못했어요: ' + error.message, 'error');
         }
       }
 
@@ -660,9 +636,24 @@
           throw new Error('모델이 아직 준비되지 않았습니다.');
         }
 
-        const { pose, posenetOutput } = await model.estimatePose(imageElement);
-        const prediction = await model.predict(posenetOutput);
+        // 1단계: 사진에서 사람의 관절 위치를 추정한다.
+        let poseOutput;
+        try {
+          const estimated = await model.estimatePose(imageElement);
+          poseOutput = estimated.posenetOutput;
+          if (!poseOutput || !poseOutput.length) throw new Error('포즈 특징값이 비어 있습니다.');
+        } catch (error) {
+          throw new Error('포즈 추정 실패: ' + error.message, { cause: error });
+        }
 
+        // 2단계: 추정한 관절 특징값으로 스쿼트 자세를 분류한다.
+        let prediction;
+        try {
+          prediction = await model.predict(poseOutput);
+          if (!Array.isArray(prediction) || !prediction.length) throw new Error('예측 결과가 비어 있습니다.');
+        } catch (error) {
+          throw new Error('자세 분류 실패: ' + error.message, { cause: error });
+        }
         return getPredictionResult(prediction);
       }
 
@@ -688,7 +679,7 @@
           setModelStatus('AI 모델 준비 완료!', 'success');
         } catch (error) {
           console.error('[Analyze] 추론 실패:', error);
-          setModelStatus('AI가 자세를 분석하지 못했어요. 사진을 다시 선택해 주세요.', 'error');
+          setModelStatus('AI가 자세를 분석하지 못했어요: ' + error.message, 'error');
         } finally {
           updateAnalyzeButton();
         }
