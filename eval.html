@@ -6,43 +6,21 @@
   <title>교사용 스쿼트 포즈 평가</title>
   <style>
     :root {
-      --bg: #f5f9ff;
-      --panel: #fff;
-      --line: #dfeaf7;
-      --text: #1f2d3d;
-      --muted: #5d7186;
-      --primary: #2d7ff9;
-      --primary-dark: #1a5fe0;
-      --success: #16885a;
-      --danger: #cf394b;
-      --shadow: 0 14px 32px rgba(56, 86, 139, .12);
+      --bg: #f5f9ff; --panel: #fff; --line: #dfeaf7; --text: #1f2d3d;
+      --muted: #5d7186; --primary: #2d7ff9; --primary-dark: #1a5fe0;
+      --success: #16885a; --danger: #cf394b; --shadow: 0 14px 32px rgba(56, 86, 139, .12);
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-      background: linear-gradient(180deg, #edf6ff 0%, #f8fbff 100%);
-      color: var(--text);
-    }
+    body { margin: 0; font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: linear-gradient(180deg, #edf6ff 0%, #f8fbff 100%); color: var(--text); }
     .wrap { max-width: 1200px; margin: auto; padding: 28px 18px 48px; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-      padding: 22px;
-      margin-bottom: 20px;
-    }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 20px; }
     h1 { margin: 0 0 10px; color: #1d4d8f; font-size: clamp(1.9rem, 3vw, 2.8rem); }
     h2 { margin: 0 0 12px; color: #224d7b; font-size: 1.25rem; }
     p { line-height: 1.65; }
     .subtitle { color: var(--muted); margin: 0; }
     .mode-link { display: inline-block; margin-bottom: 16px; color: #1d57ad; font-weight: 700; text-decoration: none; }
     .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
-    .file-label, button {
-      border: 0; border-radius: 13px; padding: 12px 18px; font-size: .98rem;
-      font-weight: 700; cursor: pointer;
-    }
+    .file-label, button { border: 0; border-radius: 13px; padding: 12px 18px; font-size: .98rem; font-weight: 700; cursor: pointer; }
     .file-label { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; }
     button { background: #eaf2ff; border: 1px solid #cfe0ff; color: #1b55a2; }
     button:disabled { opacity: .5; cursor: not-allowed; }
@@ -50,7 +28,7 @@
     .status { margin-top: 16px; padding: 13px 15px; border-radius: 14px; background: #edf8ff; border: 1px solid #cde8fa; color: #1a5f8d; font-weight: 700; }
     .status.error { background: #fff0f2; border-color: #f4ced4; color: #a4294e; }
     .status.success { background: #ecfff5; border-color: #c8ebd7; color: #11784d; }
-    .hint { margin: 10px 0 0; font-size: .92rem; color: var(--muted); }
+    .hint { margin: 10px 0 0; font-size: .92rem; color: var(--muted); overflow-wrap: anywhere; }
     .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
     .stat { border: 1px solid var(--line); background: #f8fbff; border-radius: 14px; padding: 14px 16px; }
     .stat-label { color: var(--muted); font-size: .84rem; margin-bottom: 6px; }
@@ -75,7 +53,7 @@
     <section class="panel">
       <a class="mode-link" href="./index.html">← 모드 선택으로 돌아가기</a>
       <h1>교사용 스쿼트 포즈 평가</h1>
-      <p class="subtitle">여러 사진을 한꺼번에 선택해 포즈 모델로 예측하고, 파일명에서 실제 클래스를 읽어 혼동행렬과 클래스별 정분류율을 계산합니다.</p>
+      <p class="subtitle">여러 사진을 한꺼번에 선택해 포즈 모델로 예측하고 파일명에서 실제 클래스를 읽어 혼동행렬과 클래스별 정분류율을 계산합니다.</p>
       <div class="toolbar">
         <label class="file-label" for="imageInput">여러 사진 선택</label>
         <input id="imageInput" type="file" accept="image/*" multiple />
@@ -83,7 +61,7 @@
         <button id="downloadBtn" type="button" disabled>CSV 다운로드</button>
         <button id="resetBtn" type="button">초기화</button>
       </div>
-      <p class="hint">파일명은 실제 클래스명으로 시작해야 합니다. 예: 올바른스쿼트옆모습_01.jpg<br />사진과 추론은 브라우저에서 처리되며 사진 파일을 업로드하지 않습니다.</p>
+      <p class="hint">파일명은 실제 클래스명으로 시작해야 합니다. 예: 잘못된스쿼트(벗윙크)_1.jpg<br />사진과 추론은 브라우저에서 처리되며 사진 파일은 외부로 전송하지 않습니다.</p>
       <div id="status" class="status" role="status" aria-live="polite">포즈 모델을 불러오는 중입니다…</div>
       <div id="loadDetails" class="hint"></div>
     </section>
@@ -121,11 +99,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js"></script>
   <script>
-    // 이 모델은 Teachable Machine Pose입니다. 이미지 모델용 tmImage를 사용하지 않습니다.
+    // Teachable Machine Pose 모델과 같은 폴더의 JSON 및 가중치 파일을 사용합니다.
     const MODEL_URL = './model.json';
     const METADATA_URL = './metadata.json';
 
-    // 요청하신 다섯 클래스를 표시 순서와 혼동행렬 축으로 고정합니다.
+    // 표시와 행렬의 클래스 순서를 명시적으로 고정합니다.
     const CLASS_NAMES = [
       '올바른스쿼트옆모습',
       '올바른스쿼트정면',
@@ -151,20 +129,32 @@
     let previewUrls = [];
     let isEvaluating = false;
 
-    // 라벨 비교 시 공백/기호 차이는 무시하되, 한국어 클래스 의미는 유지합니다.
+    // 괄호·공백·기호 차이를 없애 비교합니다. 예: 잘못된스쿼트(벗윙크) == 잘못된스쿼트벗윙크
     function normalizeLabel(value) {
-      return String(value ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+      return String(value ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    }
+
+    // 모델의 영어/짧은 별칭 라벨을 지정된 한국어 5개 클래스로 변환합니다.
+    function canonicalizeClass(value) {
+      const normalized = normalizeLabel(value);
+      const exact = CLASS_NAMES.find((name) => normalizeLabel(name) === normalized);
+      if (exact) return exact;
+
+      if (/(bad)?buttwink|벗윙크/.test(normalized)) return '잘못된스쿼트벗윙크';
+      if (/(bad)?kneecollapse|kneecollapse|무릎모임/.test(normalized)) return '잘못된스쿼트무릎모임';
+      if (/(bad)?backbend|허리말림|backbend/.test(normalized)) return '잘못된스쿼트허리말림';
+      if (/올바른스쿼트옆모습|correctside|goodsidesquat|sidecorrect/.test(normalized)) return '올바른스쿼트옆모습';
+      if (/올바른스쿼트정면|correctfront|goodfrontsquat|frontcorrect/.test(normalized)) return '올바른스쿼트정면';
+
+      // 모델에서 'correct'만 반환하면 앞모습/옆모습을 구별할 정보가 없습니다.
+      // 그 경우 임의로 한 클래스에 넣지 않고 매핑 안 된 예측으로 둡니다.
+      return null;
     }
 
     function getActualLabel(fileName) {
-      // 실제 클래스는 첫 번째 밑줄 앞부분입니다. (예: class_01.jpg → class)
+      // 실제 클래스는 파일명 밑줄 앞부분입니다. 괄호는 정규화 단계에서 제거합니다.
       const base = fileName.replace(/\.[^/.]+$/, '');
-      return base.split('_')[0].trim();
-    }
-
-    function findCanonicalClass(label) {
-      const normalized = normalizeLabel(label);
-      return CLASS_NAMES.find((name) => normalizeLabel(name) === normalized) || null;
+      return canonicalizeClass(base.split('_')[0].trim());
     }
 
     function setStatus(message, type = '') {
@@ -197,50 +187,45 @@
         setStatus('TensorFlow.js와 포즈 모델을 불러오는 중입니다…');
         if (!window.tf) throw new Error('TensorFlow.js 로드 실패 (CDN 확인 필요)');
         if (!window.tmPose) throw new Error('Teachable Machine Pose 라이브러리 로드 실패 (CDN 확인 필요)');
-
         await window.tf.ready();
+
         const response = await fetch(METADATA_URL);
         if (!response.ok) throw new Error(`metadata.json 요청 실패 (${response.status})`);
         const metadata = await response.json();
         modelLabels = Array.isArray(metadata.labels) ? metadata.labels : [];
-
-        // Teachable Machine Pose API로 pose 모델과 metadata를 함께 읽습니다.
         model = await window.tmPose.load(MODEL_URL, METADATA_URL);
+
         runBtn.disabled = false;
         setStatus('포즈 모델 준비 완료. 여러 사진을 선택하고 평가 시작을 누르세요.', 'success');
         loadDetails.textContent = `모델 라벨: ${modelLabels.join(' / ') || '메타데이터에 라벨 없음'}`;
       } catch (error) {
         console.error('[모델 로딩 오류]', error);
         setStatus(`모델 로딩 실패: ${error.message}`, 'error');
-        loadDetails.textContent = 'model.json, metadata.json, weights.bin이 같은 폴더에 있는지, 페이지를 HTTP(S) 주소로 열었는지 확인하세요.';
+        loadDetails.textContent = 'model.json, metadata.json, weights.bin이 같은 폴더에 있는지 확인하세요. 페이지는 file://가 아닌 HTTP(S) 주소로 열어야 합니다.';
       }
     }
 
     async function predictFile(file) {
       const { image, url } = await createImage(file);
       try {
-        // Pose 모델은 이미지에서 먼저 포즈를 추정하고, posenetOutput으로 클래스를 예측합니다.
+        // Pose API 흐름: 먼저 이미지에서 포즈�� 추정하고, posenetOutput을 분류합니다.
         const estimate = await model.estimatePose(image);
         const prediction = await model.predict(estimate.posenetOutput);
-        if (!Array.isArray(prediction) || prediction.length === 0) {
-          throw new Error(`예측 결과가 비었습니다: ${file.name}`);
-        }
-        const best = prediction.reduce((top, item) =>
-          Number(item.probability || 0) > Number(top.probability || 0) ? item : top
-        , prediction[0]);
+        if (!Array.isArray(prediction) || !prediction.length) throw new Error(`예측 결과가 비었습니다: ${file.name}`);
 
-        const actualRaw = getActualLabel(file.name);
-        const actualClass = findCanonicalClass(actualRaw);
-        const predictedRaw = String(best.className || '').trim();
-        const predictedClass = findCanonicalClass(predictedRaw);
+        const best = prediction.reduce((top, item) => Number(item.probability || 0) > Number(top.probability || 0) ? item : top, prediction[0]);
+        const actualClass = getActualLabel(file.name);
+        const rawPredicted = String(best.className || '').trim();
+        const predictedClass = canonicalizeClass(rawPredicted);
 
         return {
           fileName: file.name,
-          actual: actualClass || actualRaw || '알 수 없음',
-          predicted: predictedClass || predictedRaw || '알 수 없음',
+          actual: actualClass,
+          predicted: predictedClass,
+          rawPredicted,
           confidence: Number(best.probability || 0),
-          correct: Boolean(actualClass && predictedClass && actualClass === predictedClass),
           validActual: Boolean(actualClass),
+          correct: Boolean(actualClass && predictedClass && actualClass === predictedClass),
           previewUrl: url
         };
       } catch (error) {
@@ -251,53 +236,49 @@
 
     function renderSummary() {
       const scored = results.filter((row) => row.validActual);
-      const total = scored.length;
       const correct = scored.filter((row) => row.correct).length;
-      document.getElementById('totalCount').textContent = String(total);
+      document.getElementById('totalCount').textContent = String(scored.length);
       document.getElementById('correctCount').textContent = String(correct);
-      document.getElementById('wrongCount').textContent = String(total - correct);
-      document.getElementById('accuracy').textContent = `${(total ? correct / total * 100 : 0).toFixed(1)}%`;
+      document.getElementById('wrongCount').textContent = String(scored.length - correct);
+      document.getElementById('accuracy').textContent = `${(scored.length ? correct / scored.length * 100 : 0).toFixed(1)}%`;
     }
 
     function renderMatrix() {
-      // 실제와 예측의 각 클래스명을 다섯 개 고정 라벨로 집계합니다.
       const matrix = CLASS_NAMES.map(() => Array(CLASS_NAMES.length).fill(0));
+      let unmappedPredictions = 0;
       results.forEach((row) => {
         if (!row.validActual) return;
         const actualIndex = CLASS_NAMES.indexOf(row.actual);
         const predictedIndex = CLASS_NAMES.indexOf(row.predicted);
         if (actualIndex >= 0 && predictedIndex >= 0) matrix[actualIndex][predictedIndex] += 1;
+        else unmappedPredictions += 1;
       });
 
-      const header = `<thead><tr><th>실제 \ 예측</th>${CLASS_NAMES.map((label) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead>`;
-      const body = `<tbody>${CLASS_NAMES.map((label, rowIndex) =>
-        `<tr><th>${escapeHtml(label)}</th>${matrix[rowIndex].map((count) => `<td>${count}</td>`).join('')}</tr>`
-      ).join('')}</tbody>`;
+      const header = `<thead><tr><th>실제 \ 예측</th>${CLASS_NAMES.map((name) => `<th>${escapeHtml(name)}</th>`).join('')}</tr></thead>`;
+      const body = `<tbody>${CLASS_NAMES.map((name, rowIndex) => `<tr><th>${escapeHtml(name)}</th>${matrix[rowIndex].map((count) => `<td>${count}</td>`).join('')}</tr>`).join('')}</tbody>`;
       matrixTable.innerHTML = header + body;
 
-      const accuracyHeader = '<thead><tr><th>실제 클래스</th><th>정분류/전체</th><th>정분류율</th></tr></thead>';
-      const accuracyBody = `<tbody>${CLASS_NAMES.map((label, index) => {
-        const total = matrix[index].reduce((sum, count) => sum + count, 0);
+      const accHeader = '<thead><tr><th>실제 클래스</th><th>정분류/전체</th><th>정분류율</th></tr></thead>';
+      const accBody = `<tbody>${CLASS_NAMES.map((name, index) => {
+        const total = results.filter((row) => row.validActual && row.actual === name).length;
         const correct = matrix[index][index];
-        const rate = total ? (correct / total * 100).toFixed(1) : '—';
-        return `<tr><td>${escapeHtml(label)}</td><td>${correct}/${total}</td><td>${rate}${total ? '%' : ''}</td></tr>`;
+        const rate = total ? `${(correct / total * 100).toFixed(1)}%` : '—';
+        return `<tr><td>${escapeHtml(name)}</td><td>${correct}/${total}</td><td>${rate}</td></tr>`;
       }).join('')}</tbody>`;
-      accuracyTable.innerHTML = accuracyHeader + accuracyBody;
+      accuracyTable.innerHTML = accHeader + accBody;
+      return unmappedPredictions;
     }
 
     function renderResultsTable() {
-      if (!results.length) {
-        resultsTable.innerHTML = '<tbody><tr><td>아직 평가 결과가 없습니다.</td></tr></tbody>';
-        return;
-      }
-      const header = '<thead><tr><th>파일</th><th>실제 클래스</th><th>예측 클래스</th><th>확률</th><th>결과</th></tr></thead>';
-      const body = `<tbody>${results.map((row) => `<tr>
+      const header = '<thead><tr><th>파일</th><th>실제 클래스</th><th>예측 클래스</th><th>모델 원본 라벨</th><th>확률</th><th>결과</th></tr></thead>';
+      const body = results.length ? `<tbody>${results.map((row) => `<tr>
         <td>${escapeHtml(row.fileName)}</td>
-        <td>${escapeHtml(row.actual)}</td>
-        <td>${escapeHtml(row.predicted)}</td>
+        <td>${escapeHtml(row.actual || '클래스명 불일치')}</td>
+        <td>${escapeHtml(row.predicted || '매핑되지 않은 예측')}</td>
+        <td>${escapeHtml(row.rawPredicted)}</td>
         <td>${(row.confidence * 100).toFixed(1)}%</td>
-        <td>${row.validActual ? (row.correct ? '정답' : '오답') : '파일명 클래스 확인 필요'}</td>
-      </tr>`).join('')}</tbody>`;
+        <td>${row.validActual ? (row.correct ? '정답' : '오답') : '파일명 확인 필요'}</td>
+      </tr>`).join('')}</tbody>` : '<tbody><tr><td>아직 평가 결과가 없습니다.</td></tr></tbody>';
       resultsTable.innerHTML = header + body;
     }
 
@@ -309,15 +290,19 @@
       }
       errorList.innerHTML = wrong.map((row) => `<article class="error-item">
         <img class="thumb" src="${row.previewUrl}" alt="${escapeHtml(row.fileName)}" />
-        <div class="error-meta"><strong>${escapeHtml(row.fileName)}</strong><br>실제: ${escapeHtml(row.actual)}<br>예측: ${escapeHtml(row.predicted)}<br>확률: ${(row.confidence * 100).toFixed(1)}%</div>
+        <div class="error-meta"><strong>${escapeHtml(row.fileName)}</strong><br>
+          실제: ${escapeHtml(row.actual || '파일명 클래스 불일치')}<br>
+          예측: ${escapeHtml(row.predicted || `매핑 안 됨 (${row.rawPredicted})`)}<br>
+          확률: ${(row.confidence * 100).toFixed(1)}%</div>
       </article>`).join('');
     }
 
     function downloadCsv() {
       if (!results.length) return;
-      const lines = [['filename', 'actual_class', 'predicted_class', 'confidence_percent', 'correct']];
+      const lines = [['filename', 'actual_class', 'predicted_class', 'raw_model_label', 'confidence_percent', 'correct']];
       results.forEach((row) => lines.push([
-        row.fileName, row.actual, row.predicted, (row.confidence * 100).toFixed(2), row.correct ? 'true' : 'false'
+        row.fileName, row.actual || '', row.predicted || '', row.rawPredicted,
+        (row.confidence * 100).toFixed(2), row.correct ? 'true' : 'false'
       ]));
       const csv = lines.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
       const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
@@ -330,7 +315,7 @@
 
     async function evaluateSelection() {
       if (!model) {
-        setStatus('모델이 준비되지 않았습니다. 먼저 모델 로딩 상태를 확인하세요.', 'error');
+        setStatus('모델이 준비되지 않았습니다. 모델 로딩 상태를 확인하세요.', 'error');
         return;
       }
       const files = Array.from(imageInput.files || []).filter((file) => file.type.startsWith('image/'));
@@ -339,7 +324,6 @@
         return;
       }
 
-      isEvaluating = true;
       runBtn.disabled = true;
       downloadBtn.disabled = true;
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -361,21 +345,21 @@
       }
 
       renderSummary();
-      renderMatrix();
+      const unmapped = renderMatrix();
       renderResultsTable();
       renderErrors();
       downloadBtn.disabled = !results.length;
       runBtn.disabled = false;
-      isEvaluating = false;
 
       if (!results.length) {
         setStatus('이미지를 처리하지 못했습니다. 자세한 내용은 개발자 콘솔을 확인하세요.', 'error');
       } else {
         const invalidNames = results.filter((row) => !row.validActual).length;
         let message = `평가 완료: ${results.length}장 분석됨.`;
-        if (invalidNames) message += ` 파일명에서 지정된 다섯 클래스 중 실제 클래스를 찾지 못한 사진 ${invalidNames}장.`;
+        if (invalidNames) message += ` 파일명에서 지정된 다섯 클래스와 일치하지 않는 실제 라벨 ${invalidNames}장.`;
+        if (unmapped) message += ` 지정 클래스에 매핑되지 않은 모델 예측 ${unmapped}건.`;
         if (failures.length) message += ` 분석 실패 ${failures.length}장.`;
-        setStatus(message, failures.length || invalidNames ? 'error' : 'success');
+        setStatus(message, failures.length || invalidNames || unmapped ? 'error' : 'success');
         loadDetails.textContent = failures.join(' | ');
       }
     }
