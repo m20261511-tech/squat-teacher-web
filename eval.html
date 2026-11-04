@@ -59,11 +59,13 @@
         <input id="imageInput" type="file" accept="image/*" multiple />
         <button id="runBtn" type="button" disabled>평가 시작</button>
         <button id="downloadBtn" type="button" disabled>CSV 다운로드</button>
+        <button id="copyCsvBtn" type="button" disabled>CSV 내용 복사</button>
         <button id="resetBtn" type="button">초기화</button>
       </div>
       <p class="hint">파일명에는 올바른스쿼트정면, 올바른스쿼트옆모습, 잘못된스쿼트무릎모임, 잘못된스쿼트허리말림, 잘못된스쿼트벗윙크 중 하나를 앞에 적어 주세요. 괄호와 띄어쓰기는 없어도 됩니다. 예: 잘못된스쿼트벗윙크_1.jpg<br />사진과 추론은 브라우저에서 처리되며 사진 파일은 외부로 전송하지 않습니다.</p>
       <div id="status" class="status" role="status" aria-live="polite">포즈 모델을 불러오는 중입니다…</div>
       <div id="loadDetails" class="hint"></div>
+      <div id="csvHelp" class="hint" aria-live="polite" hidden></div>
     </section>
 
     <section class="panel summary">
@@ -114,6 +116,8 @@
     const imageInput = $('imageInput');
     const runBtn = $('runBtn');
     const downloadBtn = $('downloadBtn');
+    const copyCsvBtn = $('copyCsvBtn');
+    const csvHelp = $('csvHelp');
     const resetBtn = $('resetBtn');
     const statusEl = $('status');
     const loadDetails = $('loadDetails');
@@ -311,23 +315,72 @@
       </article>`).join('');
     }
 
+    // CSV는 UTF-8 BOM을 포함해 Excel에서 한글이 깨지는 것을 방지합니다.
     function csvCell(value) { return `"${String(value ?? '').replace(/"/g, '""')}"`; }
-    function downloadCsv() {
+    function buildCsv() {
       const rows = [['filename', 'actual_class', 'predicted_class', 'raw_label', 'confidence_percent', 'status', 'correct', 'error']];
       for (const r of results) {
         rows.push([r.fileName, r.actual || '', r.predicted || '', r.rawPredicted,
           r.confidence == null ? '' : (r.confidence * 100).toFixed(2),
           r.state, r.actual && r.state !== '분석 실패' ? String(r.correct) : '', r.error]);
       }
-      const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
-      const url = URL.createObjectURL(new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'}));
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'squat_pose_evaluation.csv';
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+    }
+
+    let csvDownloadUrl = null;
+    function releaseCsvUrl() {
+      if (csvDownloadUrl) URL.revokeObjectURL(csvDownloadUrl);
+      csvDownloadUrl = null;
+      csvHelp.textContent = '';
+      csvHelp.hidden = true;
+    }
+
+    // 자동 저장이 차단될 때를 대비해 수동 다운로드 링크도 남겨 둡니다.
+    function downloadCsv() {
+      if (!results.length) {
+        setStatus('먼저 사진 평가를 완료해 주세요.', 'error');
+        return;
+      }
+      try {
+        releaseCsvUrl();
+        const blob = new Blob([buildCsv()], { type: 'text/csv;charset=utf-8' });
+        csvDownloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = csvDownloadUrl;
+        link.download = 'squat_pose_evaluation.csv';
+        link.textContent = 'CSV 파일 직접 저장하기';
+        link.style.fontWeight = '700';
+        csvHelp.append('파일 저장이 시작되지 않았다면 ', link, '를 눌러 주세요. 또는 CSV 내용 복사 버튼을 사용하세요.');
+        csvHelp.hidden = false;
+        link.click();
+        // URL을 즉시 해제하지 않습니다. 수동 링크를 이용할 수 있도록 유지합니다.
+        console.log('[CSV] 생성 완료:', results.length, '행', blob.size, 'bytes');
+      } catch (error) {
+        console.error('[CSV 다운로드 오류]', error);
+        setStatus('CSV 파일 준비 중 오류가 발생했습니다: ' + error.message, 'error');
+      }
+    }
+
+    async function copyCsv() {
+      if (!results.length) return;
+      const csvText = buildCsv().replace(/^\ufeff/, '');
+      try {
+        await navigator.clipboard.writeText(csvText);
+        csvHelp.textContent = 'CSV 내용이 복사됐습니다. 메모장에 붙여넣고 UTF-8 형식으로 .csv 파일을 저장할 수 있어요.';
+        csvHelp.hidden = false;
+      } catch (error) {
+        console.error('[CSV 복사 오류]', error);
+        // 권한 제한 환경에서는 직접 선택해 복사할 수 있도록 텍스트 영역 제공
+        csvHelp.textContent = '자동 복사가 제한되어 아래 텍스트를 직접 복사해 주세요.';
+        const textarea = document.createElement('textarea');
+        textarea.value = csvText;
+        textarea.rows = 5;
+        textarea.style.width = '100%';
+        csvHelp.appendChild(textarea);
+        csvHelp.hidden = false;
+        textarea.focus();
+        textarea.select();
+      }
     }
 
     async function evaluateSelection() {
@@ -337,6 +390,8 @@
       busy = true;
       runBtn.disabled = true;
       downloadBtn.disabled = true;
+      copyCsvBtn.disabled = true;
+      releaseCsvUrl();
       releasePreviews();
       results = [];
       selectedCount = files.length;
@@ -355,6 +410,7 @@
         renderResultsTable();
         renderErrors();
         downloadBtn.disabled = results.length === 0;
+        copyCsvBtn.disabled = results.length === 0;
         const { success, scored, failed } = statistics();
         const unmatchedNames = success.filter(r => !r.actual).length;
         setStatus(`평가 완료: 분석 성공 ${success.length}장, 분석 실패 ${failed}장, 실제 클래스 확인 ${scored.length}장${unmatchedNames ? ', 파일명 미매칭 ' + unmatchedNames + '장' : ''}.`, failed ? 'error' : 'success');
@@ -377,6 +433,8 @@
       renderResultsTable();
       renderErrors();
       downloadBtn.disabled = true;
+      copyCsvBtn.disabled = true;
+      releaseCsvUrl();
       loadDetails.textContent = `모델 클래스: ${modelLabels.join(' / ')}`;
       setStatus(model ? '모델 준비 완료. 사진을 선택해 평가하세요.' : '모델을 불러오는 중입니다.');
     }
@@ -386,8 +444,9 @@
     });
     runBtn.addEventListener('click', evaluateSelection);
     downloadBtn.addEventListener('click', downloadCsv);
+    copyCsvBtn.addEventListener('click', copyCsv);
     resetBtn.addEventListener('click', resetPage);
-    window.addEventListener('beforeunload', releasePreviews);
+    window.addEventListener('beforeunload', () => { releasePreviews(); releaseCsvUrl(); });
     renderSummary(); renderMatrix(); renderResultsTable(); renderErrors();
     loadModel();
   </script>
